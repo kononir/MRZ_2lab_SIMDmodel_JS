@@ -1,6 +1,11 @@
 document.getElementById('run').addEventListener('click', main);
 
 function main(){
+    var checkingAnswer = checkInput();
+    
+    if(!checkingAnswer)
+        return;
+    
     var p = document.getElementById('p').value;
     var m = document.getElementById('m').value;
     var q = document.getElementById('q').value;
@@ -9,23 +14,15 @@ function main(){
     var b = generateMatrix(m, q);
     var g = generateMatrix(m, p);
     var h = generateMatrix(q, m);
-
-    addMatrixName("A");
-    drawDoubleMatrix(a);
+  
+    drawDoubleMatrix(a, "A");
+    drawDoubleMatrix(b, "B");
+    drawDoubleMatrix(g, "G");
+    drawDoubleMatrix(h, "H");
     
-    addMatrixName("B");
-    drawDoubleMatrix(b);
+    var c = calculateC(a, b, g, h);
     
-    addMatrixName("G");
-    drawDoubleMatrix(g);
-    
-    addMatrixName("H");
-    drawDoubleMatrix(h);
-    
-    var c = calculateC(a, b, g, h);   
-    
-    addMatrixName("C");
-    drawDoubleMatrix(c);
+    drawDoubleMatrix(c, "C");
 }
 
 function generateMatrix(x, y){
@@ -55,6 +52,9 @@ function calculateC(a, b, g, h){
     var d = new Array();
     d.length = p;
     
+    var r3s31 = 0;
+    var r3s32 = 0;
+    
     for(var i = 0; i < p; i++){
         c[i] = new Array();
         c[i].length = q;
@@ -62,14 +62,25 @@ function calculateC(a, b, g, h){
         d[i].length = q;
         for(var j = 0; j < q; j++){
             var answer = check(g, h, i, j);
+            
             d[i][j] = calculateDkij(a, b, i, j);
             
-            answer ? c[i][j] = product(d[i][j]): c[i][j] = sum(d[i][j]);
+            if(answer){
+                c[i][j] = product(d[i][j]);
+                r3s31++;
+            }
+            else{
+                c[i][j] = sum(d[i][j]);
+                r3s32++;
+            }
         }
     }
     
-    addMatrixName("D");
-    drawTripleMatrix(d);
+    drawTripleMatrix(d, "D");
+    
+    var divRate = findDivRate(r3s31, r3s32);
+    
+    printMetric(divRate, "Коэффициент расхождения");
     
     return c;
 }
@@ -92,7 +103,7 @@ function calculateDkij(a, b, i, j){
     dij.length = m;
     
     for(var k = 0; k < m; k++)
-        dij[k] = a[i][k] + b[k][j];
+        dij[k] = a[i][k] * b[k][j];
 
     return dij;
 }
@@ -119,7 +130,58 @@ function sum(dij){
     return cij;
 }
 
-function drawDoubleMatrix(matrix){
+function findLsum(r3s31, r3s32){
+    var p = document.getElementById('p').value;
+    var q = document.getElementById('q').value;
+    var m = document.getElementById('m').value;
+    
+    var sum = document.getElementById('sum').value;
+    var product = document.getElementById('product').value;
+    var compare = document.getElementById('compare').value;
+    
+    var r = p * q;
+    var lCompare = compare * m;
+    var lCalculateDkij = product * m;
+    var lProduct = product * m;
+    var lSum = sum * m;
+    
+    var lSum = (lCompare + lCalculateDkij) * r + lProduct * r3s31 + lSum * r3s32;
+    
+    return lSum;
+}
+
+function findLavg(r3s31, r3s32){
+    var p = document.getElementById('p').value;
+    var q = document.getElementById('q').value;
+    var m = document.getElementById('m').value;
+    
+    var sum = document.getElementById('sum').value;
+    var product = document.getElementById('product').value;
+    var compare = document.getElementById('compare').value;    
+        
+    var r = p * q;
+    var l1s1 = compare * m;
+    var l2s1 = product * m;
+    var l3s1 = product * m;
+    var l3s2 = sum * m;
+    
+    var lAvg = (1 / r) * ((l1s1 + l2s1) * r + l3s1 * Math.pow(r3s31, 2) 
+             + l3s2 * Math.pow(r3s32, 2));
+     
+    return lAvg;
+}
+
+function findDivRate(r3s31, r3s32){
+    var lSum = findLsum(r3s31, r3s32);
+    var lAvg = findLavg(r3s31, r3s32);
+    
+    var divRate = lSum / lAvg;
+    return divRate;
+}
+
+function drawDoubleMatrix(matrix, matrixName){
+    addCennter(matrixName);
+    
     var table = document.createElement("table");
     configureTable(table);
     
@@ -170,7 +232,9 @@ function drawDoubleMatrix(matrix){
     document.body.appendChild(table);
 }
 
-function drawTripleMatrix(matrix){
+function drawTripleMatrix(matrix, matrixName){
+    addCennter(matrixName);
+    
     var table = document.createElement("table");
     configureTable(table);
     
@@ -235,7 +299,7 @@ function configureTable(table){
     table.setAttribute("align", "center");
 }
 
-function addMatrixName(name){
+function addCennter(name){
     addDocumentVerticalSpaces(2);
     var paragraph = document.createElement("p");
     paragraph.setAttribute("align", "center");
@@ -248,4 +312,30 @@ function addDocumentVerticalSpaces(number){
         var br = document.createElement("br");
         document.body.appendChild(br);
     }
+}
+
+function printMetric(metric, metricName){
+    addCennter(metricName + ": " + metric);
+}
+
+function checkInput(){
+    var inputMas = new Array();
+    inputMas.length = 3;
+    inputMas[0] = document.getElementById('p').value;
+    inputMas[1] = document.getElementById('m').value;
+    inputMas[2] = document.getElementById('q').value;
+
+    for(var iter = 0; iter < inputMas.length; iter++){
+        if(inputMas[iter].search(/\D/) > -1){
+            alert("Присутствие посторонних символов!");
+            return(false);
+        }
+
+        var number = +(inputMas[iter]);
+        if(number <= 0){
+            alert("Неверное число в вводе или ввод не произведён!");
+            return(false);
+        }
+    }
+    return true;
 }
